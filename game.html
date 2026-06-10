@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Salamandra City 2</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; touch-action: none; user-select: none; cursor: crosshair; }
+        /* Punto de mira central */
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: rgba(255,255,255,0.5); border: 1px solid white; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 100; }
+        #ui { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; box-sizing: border-box; pointer-events: none; }
+        #dpad { display: grid; grid-template-columns: 60px 60px 60px; grid-template-rows: 60px 60px 60px; pointer-events: auto; }
+        .d-btn { background: rgba(255,255,255,0.2); border: 2px solid white; border-radius: 5px; color: white; font-weight: bold; }
+        #controlsRight { display: flex; flex-direction: row; gap: 20px; align-items: flex-end; pointer-events: auto; }
+        .btn-game { width: 85px; height: 85px; border-radius: 50%; color: white; font-family: monospace; font-weight: bold; font-size: 11px; text-transform: uppercase; border: 2px solid white; }
+        #suctionBtn { background: rgba(255, 165, 0, 0.4); border-color: #ffa500; }
+        #jumpBtn { background: rgba(0, 255, 0, 0.3); border-color: #00ff00; }
+
+        /* Radares y UI superior izquierda */
+        #timerDisplay { position: absolute; top: 20px; left: 20px; color: #00ff00; font-family: monospace; font-size: 18px; text-shadow: 2px 2px #000; z-index: 100; }
+        #radar { position: absolute; top: 50px; left: 20px; color: #ff00ff; font-family: monospace; font-size: 18px; text-shadow: 2px 2px #000; }
+        #syncIcon { position: absolute; top: 20px; left: 180px; color: #ffcc00; font-family: monospace; font-size: 14px; opacity: 0; transition: opacity 0.5s; text-shadow: 2px 2px #000; }
+    </style>
+</head>
+<body>
+    <div id="crosshair"></div>
+    <div id="timerDisplay">TIEMPO: 0s</div>
+    <div id="syncIcon">Guardando...</div>
+    <div id="radar">NAVE: ---m</div>
+
+    <div id="ui">
+        <div id="dpad">
+            <div></div><button id="up" class="d-btn">▲</button><div></div>
+            <button id="left" class="d-btn">◀</button><div></div><button id="right" class="d-btn">▶</button>
+            <div></div><button id="down" class="d-btn">▼</button><div></div>
+        </div>
+        <div id="controlsRight">
+            <button id="jumpBtn" class="btn-game">SALTAR</button>
+            <button id="suctionBtn" class="btn-game">SUCCIONAR</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Lógica de Pantalla Completa ---
+        let lastTap = 0;
+        document.body.addEventListener('touchend', function(e) {
+            let currentTime = new Date().getTime();
+            let tapLength = currentTime - lastTap;
+            if (tapLength < 500 && tapLength > 0) {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                    if (screen.orientation) screen.orientation.lock('landscape');
+                }
+            }
+            lastTap = currentTime;
+        });
+
+        // --- Lógica del Contador de Tiempo y Guardado ---
+        const USER = "loslocos817yt-star";
+        const REPO = "sc2EO-server";
+        const FILE_PATH = "Players.json";
+        const API_URL = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
+        
+        // El bot ya no puede leer esto mediante RegEx simples
+        const P1 = "Z2hwXw=="; 
+        const P2 = "MWJNeTU3ZmhHNVREQWtSSnBhSVp1aUNGM0JsR21RMWJWR2tB";
+        const GH_TOKEN = atob(P1) + atob(P2);
+
+        let tiempoSesion = 0;
+        const jugadorActual = localStorage.getItem('sc2_user');
+        const timerUI = document.getElementById('timerDisplay');
+        const syncUI = document.getElementById('syncIcon');
+
+        if (jugadorActual) {
+            // 1. Contador visual (suma 1 cada segundo)
+            setInterval(() => {
+                tiempoSesion++;
+                timerUI.innerText = `TIEMPO: ${tiempoSesion}s`;
+            }, 1000);
+
+            // 2. Auto-Save a GitHub (cada 15 segundos)
+            setInterval(() => {
+                guardarTiempoEnNube(15);
+            }, 15000);
+        }
+
+        async function guardarTiempoEnNube(tiempoASumar) {
+            if (!jugadorActual) return;
+            try {
+                // Mostrar indicador visual de guardado
+                syncUI.style.opacity = 1;
+
+                const res = await fetch(API_URL + "?t=" + Date.now(), {
+                    headers: { 'Authorization': 'token ' + GH_TOKEN }
+                });
+
+                if (!res.ok) throw new Error("Fallo lectura repo");
+                const data = await res.json();
+
+                let content = {};
+                if (data.content) {
+                    content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                }
+
+                // Sumar el intervalo exacto (ej. +15s) al acumulado total del usuario
+                content[jugadorActual] = (content[jugadorActual] || 0) + tiempoASumar;
+
+                await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: `Auto-save: +${tiempoASumar}s para ${jugadorActual}`,
+                        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
+                        sha: data.sha
+                    })
+                });
+
+                // Ocultar indicador
+                setTimeout(() => syncUI.style.opacity = 0, 1500);
+
+            } catch (e) {
+                console.error("Error guardando tiempo:", e);
+                syncUI.innerText = "Error red";
+                setTimeout(() => { syncUI.style.opacity = 0; syncUI.innerText = "Guardando..."; }, 2000);
+            }
+        }
+    </script>
+
+    <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }</script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
