@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Salamandra City 2: Eco-Órbita</title>
     <link rel="icon" type="image/png" href="assets/menu/favicon.png">
+    <link rel="icon" type="image/png" href="assets/menu/favicon.png">
     <style>
         body, html { margin: 0; padding: 0; background-color: #000; overflow: hidden; color: white; font-family: sans-serif; height: 100vh; width: 100vw; }
         #panoramaCanvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1; }
@@ -14,26 +15,16 @@
         #menu-container { position: absolute; left: 6%; top: 50%; transform: translateY(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center; max-width: 45%; }
         .logo-game { width: 85vw; max-width: 500px; margin-bottom: 25px; filter: drop-shadow(0px 0px 25px rgba(255, 204, 0, 0.6)); }
 
-        input { padding: 15px; margin: 10px; border-radius: 10px; border: none; width: 250px; font-size: 1.2em; color: #000; }
-        button { padding: 18px 50px; font-size: 1.4em; background: #ffcc00; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: black; box-shadow: 0 5px 15px rgba(255, 204, 0, 0.4); }
+        input { padding: 15px; margin: 10px; border-radius: 10px; border: none; width: 250px; font-size: 1.2em; color: #000; display: block; }
+        button { padding: 18px 50px; font-size: 1.4em; background: #ffcc00; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: black; box-shadow: 0 5px 15px rgba(255, 204, 0, 0.4); margin-top: 10px; }
 
         .btn-menu { margin-top: 15px; width: 100%; max-width: 300px; }
         #logoutBtn { background: #ff3333; color: white; box-shadow: 0 5px 15px rgba(255, 51, 51, 0.4); }
 
         #leaderboard-container {
-            position: absolute;
-            right: 6%;
-            top: 50%;
-            transform: translateY(-50%);
-            z-index: 10;
-            background: rgba(0, 0, 0, 0.85);
-            border: 2px solid #ffcc00;
-            border-radius: 12px;
-            padding: 20px;
-            width: 35vw;
-            max-width: 400px;
-            max-height: 65vh;
-            overflow-y: auto;
+            position: absolute; right: 6%; top: 50%; transform: translateY(-50%); z-index: 10;
+            background: rgba(0, 0, 0, 0.85); border: 2px solid #ffcc00; border-radius: 12px;
+            padding: 20px; width: 35vw; max-width: 400px; max-height: 65vh; overflow-y: auto;
             box-shadow: 0 0 20px rgba(255, 204, 0, 0.4);
         }
         #leaderboard-container h2 { margin-top: 0; color: #ffcc00; text-align: center; font-size: 1.6em; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255,204,0,0.5); }
@@ -45,13 +36,13 @@
     </style>
 </head>
 <body>
-
     <canvas id="panoramaCanvas"></canvas>
 
     <div id="auth-overlay">
-        <h1>Crea tu cuenta de Salamandra City</h1>
+        <h1>Entrar a Salamandra City</h1>
         <input type="text" id="username" placeholder="Nombre de usuario">
-        <button onclick="registrar()">Comenzar mi viaje</button>
+        <input type="password" id="password" placeholder="Contraseña">
+        <button onclick="autenticar()">Ingresar / Registrarse</button>
     </div>
 
     <div id="overlay" style="display:none;">
@@ -70,16 +61,10 @@
         <h2>TOP JUGADORES</h2>
         <table class="tabla-ranking">
             <thead>
-                <tr>
-                    <th>Pos</th>
-                    <th>Jugador</th>
-                    <th>Tiempo</th>
-                </tr>
+                <tr><th>Pos</th><th>Jugador</th><th>Tiempo</th></tr>
             </thead>
             <tbody id="leaderboard-body">
-                <tr>
-                    <td colspan='3' style='text-align:center;'>Cargando clasificaciones...</td>
-                </tr>
+                <tr><td colspan='3' style='text-align:center;'>Cargando...</td></tr>
             </tbody>
         </table>
     </div>
@@ -94,12 +79,74 @@
         const P2 = "MWJNeTU3ZmhHNVREQWtSSnBhSVp1aUNGM0JsR21RMWJWR2tB";
         const GH_TOKEN = atob(P1) + atob(P2);
 
-        function registrar() {
+        function restaurarAuth() {
+            document.getElementById('auth-overlay').innerHTML = `
+                <h1>Entrar a Salamandra City</h1>
+                <input type="text" id="username" placeholder="Nombre de usuario">
+                <input type="password" id="password" placeholder="Contraseña">
+                <button onclick="autenticar()">Ingresar / Registrarse</button>
+            `;
+        }
+
+        async function autenticar() {
             const user = document.getElementById('username').value.trim();
-            if (user) {
-                localStorage.setItem('sc2_user', user);
-                document.getElementById('auth-overlay').innerHTML = "<h2>Modificando base de datos...</h2>";
-                actualizarClasificacion(0);
+            const pass = document.getElementById('password').value.trim();
+            
+            if (!user || !pass) {
+                alert("Debes poner usuario y contraseña");
+                return;
+            }
+
+            document.getElementById('auth-overlay').innerHTML = "<h2>Conectando al servidor...</h2>";
+
+            try {
+                const res = await fetch(API_URL + "?t=" + Date.now(), { headers: { 'Authorization': 'token ' + GH_TOKEN } });
+                if (!res.ok) throw new Error("Error leyendo base de datos.");
+                const data = await res.json();
+
+                let content = {};
+                if (data.content) {
+                    content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                }
+
+                if (content[user] !== undefined) {
+                    if (typeof content[user] === 'number') {
+                        // Usuario legado (como tu récord viejo), se actualiza al nuevo formato
+                        content[user] = { pwd: pass, time: content[user] };
+                    } else if (content[user].pwd !== pass) {
+                        alert("Contraseña incorrecta o usuario ya en uso.");
+                        restaurarAuth();
+                        return;
+                    }
+                } else {
+                    // Crear nuevo usuario
+                    content[user] = { pwd: pass, time: 0 };
+                }
+
+                // Subir actualización a GitHub
+                const putRes = await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: "Auth update para: " + user,
+                        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
+                        sha: data.sha
+                    })
+                });
+
+                if (putRes.ok) {
+                    localStorage.setItem('sc2_user', user);
+                    document.getElementById('auth-overlay').style.display = 'none';
+                    document.getElementById('overlay').style.display = 'flex';
+                } else {
+                    const errInfo = await putRes.json();
+                    alert("Falló al actualizar: " + errInfo.message);
+                    restaurarAuth();
+                }
+
+            } catch (e) {
+                alert("Error de red: " + e.message);
+                restaurarAuth();
             }
         }
 
@@ -107,56 +154,8 @@
             localStorage.removeItem('sc2_user');
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('leaderboard-container').style.display = 'none';
-            
-            // Restauramos el contenedor de autenticación original
-            document.getElementById('auth-overlay').innerHTML = `
-                <h1>Crea tu cuenta de Salamandra City</h1>
-                <input type="text" id="username" placeholder="Nombre de usuario">
-                <button onclick="registrar()">Comenzar mi viaje</button>
-            `;
+            restaurarAuth();
             document.getElementById('auth-overlay').style.display = 'flex';
-        }
-
-        async function actualizarClasificacion(tiempoJugado) {
-            const user = localStorage.getItem('sc2_user');
-            if(!user) return;
-            try {
-                const res = await fetch(API_URL + "?t=" + Date.now(), {
-                    headers: { 'Authorization': 'token ' + GH_TOKEN }
-                });
-
-                if (!res.ok) throw new Error("Error leyendo base de datos.");
-                const data = await res.json();
-
-                let content = {};
-                if (data.content) {
-                    const raw = decodeURIComponent(escape(atob(data.content)));
-                    content = JSON.parse(raw);
-                }
-
-                content[user] = (content[user] || 0) + tiempoJugado;
-
-                const putRes = await fetch(API_URL, {
-                    method: 'PUT',
-                    headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: "Modificando JSON para: " + user,
-                        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
-                        sha: data.sha
-                    })
-                });
-
-                if (putRes.ok) {
-                    document.getElementById('auth-overlay').style.display = 'none';
-                    document.getElementById('overlay').style.display = 'flex';
-                } else {
-                    const errInfo = await putRes.json();
-                    alert("Falló al modificar servidor: " + errInfo.message);
-                }
-
-            } catch (e) {
-                alert("Error: " + e.message);
-            }
         }
 
         async function toggleLeaderboard() {
@@ -174,9 +173,7 @@
                 const tbody = document.getElementById('leaderboard-body');
                 tbody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>Actualizando...</td></tr>";
 
-                const res = await fetch(API_URL + "?t=" + Date.now(), {
-                    headers: { 'Authorization': 'token ' + GH_TOKEN }
-                });
+                const res = await fetch(API_URL + "?t=" + Date.now(), { headers: { 'Authorization': 'token ' + GH_TOKEN } });
                 if (!res.ok) return;
                 const data = await res.json();
 
@@ -185,9 +182,13 @@
                     content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
                 }
 
-                const usuariosOrdenados = Object.entries(content).sort((a, b) => b[1] - a[1]);
-                tbody.innerHTML = "";
+                // Adaptar para leer el nuevo formato {pwd, time} o el viejo (solo números)
+                const usuariosOrdenados = Object.entries(content).map(([nombre, val]) => {
+                    let tiempo = typeof val === 'number' ? val : val.time;
+                    return [nombre, tiempo];
+                }).sort((a, b) => b[1] - a[1]);
 
+                tbody.innerHTML = "";
                 if (usuariosOrdenados.length === 0) {
                     tbody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>No hay registros aún</td></tr>";
                     return;
@@ -196,23 +197,17 @@
                 usuariosOrdenados.forEach(([nombre, tiempo], index) => {
                     const fila = document.createElement('tr');
                     const esTop = index < 3 ? "class='top-row'" : "";
-
-                    // Asignación de medallas/trofeos para los primeros 3 puestos
                     let badge = `#${index + 1}`;
                     if (index === 0) badge = "🏆";
                     else if (index === 1) badge = "🥈";
                     else if (index === 2) badge = "🥉";
 
-                    fila.innerHTML = `
-                        <td ${esTop}>${badge}</td>
-                        <td ${esTop}>${nombre}</td>
-                        <td>${tiempo}s</td>
-                    `;
+                    fila.innerHTML = `<td ${esTop}>${badge}</td><td ${esTop}>${nombre}</td><td>${tiempo}s</td>`;
                     tbody.appendChild(fila);
                 });
 
             } catch (e) {
-                console.error("Error al cargar el Leaderboard:", e);
+                console.error("Error Leaderboard:", e);
             }
         }
 
@@ -244,9 +239,7 @@
             document.getElementById('overlay').style.display = 'none';
         };
 
-        document.getElementById('jugarBtn').onclick = () => {
-            window.location.href = 'game.html';
-        };
+        document.getElementById('jugarBtn').onclick = () => { window.location.href = 'game.html'; };
 
         window.onload = () => {
             if (localStorage.getItem('sc2_user')) {

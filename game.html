@@ -6,7 +6,6 @@
     <link rel="icon" type="image/png" href="assets/menu/favicon.png">
     <style>
         body { margin: 0; overflow: hidden; background: #000; touch-action: none; user-select: none; cursor: crosshair; }
-        /* Punto de mira central */
         #crosshair { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: rgba(255,255,255,0.5); border: 1px solid white; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 100; }
         #ui { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; box-sizing: border-box; pointer-events: none; }
         #dpad { display: grid; grid-template-columns: 60px 60px 60px; grid-template-rows: 60px 60px 60px; pointer-events: auto; }
@@ -15,8 +14,6 @@
         .btn-game { width: 85px; height: 85px; border-radius: 50%; color: white; font-family: monospace; font-weight: bold; font-size: 11px; text-transform: uppercase; border: 2px solid white; }
         #suctionBtn { background: rgba(255, 165, 0, 0.4); border-color: #ffa500; }
         #jumpBtn { background: rgba(0, 255, 0, 0.3); border-color: #00ff00; }
-
-        /* Radares y UI superior izquierda */
         #timerDisplay { position: absolute; top: 20px; left: 20px; color: #00ff00; font-family: monospace; font-size: 18px; text-shadow: 2px 2px #000; z-index: 100; }
         #radar { position: absolute; top: 50px; left: 20px; color: #ff00ff; font-family: monospace; font-size: 18px; text-shadow: 2px 2px #000; }
         #syncIcon { position: absolute; top: 20px; left: 180px; color: #ffcc00; font-family: monospace; font-size: 14px; opacity: 0; transition: opacity 0.5s; text-shadow: 2px 2px #000; }
@@ -41,7 +38,6 @@
     </div>
 
     <script>
-        // --- Lógica de Pantalla Completa ---
         let lastTap = 0;
         document.body.addEventListener('touchend', function(e) {
             let currentTime = new Date().getTime();
@@ -55,13 +51,11 @@
             lastTap = currentTime;
         });
 
-        // --- Lógica del Contador de Tiempo y Guardado ---
         const USER = "loslocos817yt-star";
         const REPO = "sc2EO-server";
         const FILE_PATH = "Players.json";
         const API_URL = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
         
-        // El bot ya no puede leer esto mediante RegEx simples
         const P1 = "Z2hwXw=="; 
         const P2 = "MWJNeTU3ZmhHNVREQWtSSnBhSVp1aUNGM0JsR21RMWJWR2tB";
         const GH_TOKEN = atob(P1) + atob(P2);
@@ -72,13 +66,11 @@
         const syncUI = document.getElementById('syncIcon');
 
         if (jugadorActual) {
-            // 1. Contador visual (suma 1 cada segundo)
             setInterval(() => {
                 tiempoSesion++;
                 timerUI.innerText = `TIEMPO: ${tiempoSesion}s`;
             }, 1000);
 
-            // 2. Auto-Save a GitHub (cada 15 segundos)
             setInterval(() => {
                 guardarTiempoEnNube(15);
             }, 15000);
@@ -87,13 +79,9 @@
         async function guardarTiempoEnNube(tiempoASumar) {
             if (!jugadorActual) return;
             try {
-                // Mostrar indicador visual de guardado
                 syncUI.style.opacity = 1;
 
-                const res = await fetch(API_URL + "?t=" + Date.now(), {
-                    headers: { 'Authorization': 'token ' + GH_TOKEN }
-                });
-
+                const res = await fetch(API_URL + "?t=" + Date.now(), { headers: { 'Authorization': 'token ' + GH_TOKEN } });
                 if (!res.ok) throw new Error("Fallo lectura repo");
                 const data = await res.json();
 
@@ -102,8 +90,18 @@
                     content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
                 }
 
-                // Sumar el intervalo exacto (ej. +15s) al acumulado total del usuario
-                content[jugadorActual] = (content[jugadorActual] || 0) + tiempoASumar;
+                // Lógica actualizada para respetar las contraseñas
+                if (content[jugadorActual] !== undefined) {
+                    if (typeof content[jugadorActual] === 'number') {
+                        // Por si se quedó atrapado en el formato viejo
+                        content[jugadorActual] = { pwd: "", time: content[jugadorActual] + tiempoASumar };
+                    } else {
+                        content[jugadorActual].time += tiempoASumar;
+                    }
+                } else {
+                    // Si el usuario desapareció
+                    content[jugadorActual] = { pwd: "", time: tiempoASumar };
+                }
 
                 await fetch(API_URL, {
                     method: 'PUT',
@@ -115,7 +113,6 @@
                     })
                 });
 
-                // Ocultar indicador
                 setTimeout(() => syncUI.style.opacity = 0, 1500);
 
             } catch (e) {
