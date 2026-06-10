@@ -18,6 +18,7 @@
         button { padding: 18px 50px; font-size: 1.4em; background: #ffcc00; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: black; box-shadow: 0 5px 15px rgba(255, 204, 0, 0.4); }
 
         .btn-menu { margin-top: 15px; width: 100%; max-width: 300px; }
+        #logoutBtn { background: #ff3333; color: white; box-shadow: 0 5px 15px rgba(255, 51, 51, 0.4); }
 
         #leaderboard-container {
             position: absolute;
@@ -39,7 +40,7 @@
 
         .tabla-ranking { width: 100%; border-collapse: collapse; text-align: left; font-size: 1.1em; }
         .tabla-ranking th { color: #ffcc00; border-bottom: 2px solid #ffcc00; padding: 8px; }
-        .tabla-ranking td { padding: 10px 8px; border-bottom: 1px solid #333; }
+        .tabla-ranking td { padding: 10px 8px; border-bottom: 1px solid #333; line-height: 1.4em; }
         .top-row { color: #ffcc00; font-weight: bold; }
     </style>
 </head>
@@ -62,6 +63,7 @@
         <img src="assets/menu/logo.png" class="logo-game">
         <button id="jugarBtn" class="btn-menu">JUGAR</button>
         <button id="rankBtn" class="btn-menu" onclick="toggleLeaderboard()">CLASIFICACIÓN</button>
+        <button id="logoutBtn" class="btn-menu" onclick="cerrarSesion()">CERRAR SESIÓN</button>
     </div>
 
     <div id="leaderboard-container" style="display: none;">
@@ -76,7 +78,7 @@
             </thead>
             <tbody id="leaderboard-body">
                 <tr>
-                    <td colspan="3" style="text-align:center;">Cargando clasificaciones...</td>
+                    <td colspan='3' style='text-align:center;'>Cargando clasificaciones...</td>
                 </tr>
             </tbody>
         </table>
@@ -88,8 +90,6 @@
         const FILE_PATH = "Players.json";
         const API_URL = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
         
-        // BURLAMOS AL BOT DE GITHUB: Fragmentamos y ofuscamos el token en Base64
-        // P1 es "ghp_" codificado, P2 es el resto del token codificado
         const P1 = "Z2hwXw=="; 
         const P2 = "MWJNeTU3ZmhHNVREQWtSSnBhSVp1aUNGM0JsR21RMWJWR2tB";
         const GH_TOKEN = atob(P1) + atob(P2);
@@ -101,6 +101,20 @@
                 document.getElementById('auth-overlay').innerHTML = "<h2>Modificando base de datos...</h2>";
                 actualizarClasificacion(0);
             }
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('sc2_user');
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('leaderboard-container').style.display = 'none';
+            
+            // Restauramos el contenedor de autenticación original
+            document.getElementById('auth-overlay').innerHTML = `
+                <h1>Crea tu cuenta de Salamandra City</h1>
+                <input type="text" id="username" placeholder="Nombre de usuario">
+                <button onclick="registrar()">Comenzar mi viaje</button>
+            `;
+            document.getElementById('auth-overlay').style.display = 'flex';
         }
 
         async function actualizarClasificacion(tiempoJugado) {
@@ -183,8 +197,14 @@
                     const fila = document.createElement('tr');
                     const esTop = index < 3 ? "class='top-row'" : "";
 
+                    // Asignación de medallas/trofeos para los primeros 3 puestos
+                    let badge = `#${index + 1}`;
+                    if (index === 0) badge = "🏆";
+                    else if (index === 1) badge = "🥈";
+                    else if (index === 2) badge = "🥉";
+
                     fila.innerHTML = `
-                        <td ${esTop}>#${index + 1}</td>
+                        <td ${esTop}>${badge}</td>
                         <td ${esTop}>${nombre}</td>
                         <td>${tiempo}s</td>
                     `;
