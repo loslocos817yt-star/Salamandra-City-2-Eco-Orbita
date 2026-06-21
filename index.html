@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Salamandra City 2: Eco-Órbita</title>
     <link rel="icon" type="image/png" href="assets/menu/favicon.png">
-    <link rel="icon" type="image/png" href="assets/menu/favicon.png">
     <style>
         body, html { margin: 0; padding: 0; background-color: #000; overflow: hidden; color: white; font-family: sans-serif; height: 100vh; width: 100vw; }
         #panoramaCanvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1; }
@@ -36,6 +35,10 @@
     </style>
 </head>
 <body>
+    <audio id="menuMusic" loop>
+        <source src="assets/music/solarflex-space-541545.mp3" type="audio/mpeg">
+    </audio>
+
     <canvas id="panoramaCanvas"></canvas>
 
     <div id="auth-overlay">
@@ -78,6 +81,15 @@
         const P1 = "Z2hwXw=="; 
         const P2 = "MWJNeTU3ZmhHNVREQWtSSnBhSVp1aUNGM0JsR21RMWJWR2tB";
         const GH_TOKEN = atob(P1) + atob(P2);
+
+        // Iniciar música de menú en cuanto el usuario haga cualquier clic en la pantalla
+        document.body.addEventListener('click', () => {
+            const music = document.getElementById('menuMusic');
+            if (music.paused) {
+                music.volume = 0.5; // Volumen al 50%
+                music.play().catch(e => console.log("Esperando interacción para audio"));
+            }
+        }, { once: true }); // Se ejecuta solo la primera vez
 
         function restaurarAuth() {
             document.getElementById('auth-overlay').innerHTML = `
