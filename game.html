@@ -8,16 +8,17 @@
         body { margin: 0; overflow: hidden; background: #000; touch-action: none; user-select: none; cursor: crosshair; }
         #crosshair { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: rgba(255,255,255,0.5); border: 1px solid white; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 100; }
         #ui { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; box-sizing: border-box; pointer-events: none; }
-        #dpad { display: grid; grid-template-columns: 60px 60px 60px; grid-template-rows: 60px 60px 60px; pointer-events: auto; }
-        .d-btn { background: rgba(255,255,255,0.2); border: 2px solid white; border-radius: 5px; color: white; font-weight: bold; }
+        #dpad { display: grid; grid-template-columns: 100px 100px 100px; grid-template-rows: 100px 100px 100px; pointer-events: auto; }
+        .d-btn { background-size: contain; background-repeat: no-repeat; background-color: transparent; border: none; width: 100px; height: 100px; }
         #controlsRight { display: flex; flex-direction: row; gap: 20px; align-items: flex-end; pointer-events: auto; }
-        .btn-game { width: 85px; height: 85px; border-radius: 50%; color: white; font-family: monospace; font-weight: bold; font-size: 11px; text-transform: uppercase; border: 2px solid white; }
+        .btn-game { background-size: contain; background-repeat: no-repeat; border: none; width: 85px; height: 85px; background-color: transparent; }
         #suctionBtn { background: rgba(255, 165, 0, 0.4); border-color: #ffa500; }
         #jumpBtn { background: rgba(0, 255, 0, 0.3); border-color: #00ff00; }
         #timerDisplay { position: absolute; top: 20px; left: 20px; color: #00ff00; font-family: monospace; font-size: 18px; text-shadow: 2px 2px #000; z-index: 100; }
         #radar { position: absolute; top: 50px; left: 20px; color: #ff00ff; font-family: monospace; font-size: 18px; text-shadow: 2px 2px #000; }
         #syncIcon { position: absolute; top: 20px; left: 180px; color: #ffcc00; font-family: monospace; font-size: 14px; opacity: 0; transition: opacity 0.5s; text-shadow: 2px 2px #000; }
 #crt-filter { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 4px, 3px 100%; }
+.pressed { transform: scale(0.9); transition: transform 0.1s; }
     </style>
 </head>
 <body>
@@ -29,9 +30,9 @@
 
     <div id="ui">
         <div id="dpad">
-            <div></div><button id="up" class="d-btn">▲</button><div></div>
-            <button id="left" class="d-btn">◀</button><div></div><button id="right" class="d-btn">▶</button>
-            <div></div><button id="down" class="d-btn">▼</button><div></div>
+            <div></div><button id="up" class="d-btn" style="background-image: url('assets/texturas/gui/boton.norte.png');"></button><div></div>
+            <button id="left" class="d-btn" style="background-image: url('assets/texturas/gui/boton.izquierda.png');"></button><div></div><button id="right" class="d-btn" style="background-image: url('assets/texturas/gui/boton.derecha.png');"></button>
+            <div></div><button id="down" class="d-btn" style="background-image: url('assets/texturas/gui/boton.arriba.png');"></button><div></div>
         </div>
         <div id="controlsRight">
             <button id="jumpBtn" class="btn-game">SALTAR</button>
@@ -127,5 +128,14 @@
 
     <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }</script>
     <script type="module" src="js/main.js"></script>
+<script>
+  document.querySelectorAll(".d-btn, .btn-game").forEach(btn => {
+    btn.addEventListener("touchstart", () => btn.classList.add("pressed"));
+    btn.addEventListener("touchend", () => btn.classList.remove("pressed"));
+    btn.addEventListener("mousedown", () => btn.classList.add("pressed"));
+    btn.addEventListener("mouseup", () => btn.classList.remove("pressed"));
+    btn.addEventListener("mouseleave", () => btn.classList.remove("pressed"));
+  });
+</script>
 </body>
 </html>
