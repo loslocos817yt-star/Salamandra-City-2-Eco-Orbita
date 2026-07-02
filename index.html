@@ -32,6 +32,11 @@
         .tabla-ranking th { color: #ffcc00; border-bottom: 2px solid #ffcc00; padding: 8px; }
         .tabla-ranking td { padding: 10px 8px; border-bottom: 1px solid #333; line-height: 1.4em; }
         .top-row { color: #ffcc00; font-weight: bold; }
+        #user-profile { position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.85); border: 2px solid #ffcc00; border-radius: 12px; padding: 15px; z-index: 105; display: none; text-align: right; box-shadow: 0 0 15px rgba(255, 204, 0, 0.4); }
+        #user-profile p { margin: 5px 0; font-size: 1.1em; }
+        #user-profile .icon { font-size: 2.2em; float: right; margin-left: 15px; }
+        #user-profile span { color: #ffcc00; font-weight: bold; }
+        .btn-logout-small { background: #ff3333; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; margin-top: 10px; font-weight: bold; box-shadow: 0 3px 10px rgba(255, 51, 51, 0.4); }
     </style>
 </head>
 <body>
@@ -41,6 +46,13 @@
 
     <canvas id="panoramaCanvas"></canvas>
 
+    <div id="user-profile">
+        <div class="icon">👤</div>
+        <p>Piloto: <span id="profile-name">-</span></p>
+        <p>Tiempo: <span id="profile-score">-</span>s</p>
+        <p>Rango: <span id="profile-rank">-</span></p>
+        <button class="btn-logout-small" onclick="cerrarSesion()">CERRAR SESIÓN</button>
+    </div>
     <div id="auth-overlay">
         <h1>Entrar a Salamandra City</h1>
         <input type="text" id="username" placeholder="Nombre de usuario">
@@ -57,7 +69,6 @@
         <img src="assets/menu/logo.png" class="logo-game">
         <button id="jugarBtn" class="btn-menu">JUGAR</button>
         <button id="rankBtn" class="btn-menu" onclick="toggleLeaderboard()">CLASIFICACIÓN</button>
-        <button id="logoutBtn" class="btn-menu" onclick="cerrarSesion()">CERRAR SESIÓN</button>
     </div>
 
     <div id="leaderboard-container" style="display: none;">
@@ -91,6 +102,26 @@
             }
         }, { once: true }); // Se ejecuta solo la primera vez
 
+        async function actualizarPerfil() {
+            const user = localStorage.getItem("sc2_user");
+            if (!user) return;
+            document.getElementById("user-profile").style.display = "block";
+            document.getElementById("profile-name").innerText = user;
+            try {
+                const res = await fetch(API_URL + "?t=" + Date.now(), { headers: { "Authorization": "token " + GH_TOKEN } });
+                if (!res.ok) return;
+                const data = await res.json();
+                let content = {};
+                if (data.content) content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                const usuariosOrdenados = Object.entries(content).map(([nombre, val]) => {
+                    return [nombre, typeof val === "number" ? val : val.time];
+                }).sort((a, b) => b[1] - a[1]);
+                let rank = usuariosOrdenados.findIndex(u => u[0] === user) + 1;
+                let score = content[user] ? (typeof content[user] === "number" ? content[user] : content[user].time) : 0;
+                document.getElementById("profile-score").innerText = score;
+                document.getElementById("profile-rank").innerText = rank > 0 ? "#" + rank : "N/A";
+            } catch(e) { console.error("Error cargando perfil:", e); }
+        }
         function restaurarAuth() {
             document.getElementById('auth-overlay').innerHTML = `
                 <h1>Entrar a Salamandra City</h1>
@@ -150,6 +181,7 @@
                     localStorage.setItem('sc2_user', user);
                     document.getElementById('auth-overlay').style.display = 'none';
                     document.getElementById('overlay').style.display = 'flex';
+                    actualizarPerfil();
                 } else {
                     const errInfo = await putRes.json();
                     alert("Falló al actualizar: " + errInfo.message);
@@ -164,6 +196,7 @@
 
         function cerrarSesion() {
             localStorage.removeItem('sc2_user');
+            document.getElementById("user-profile").style.display = "none";
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('leaderboard-container').style.display = 'none';
             restaurarAuth();
@@ -257,6 +290,7 @@
             if (localStorage.getItem('sc2_user')) {
                 document.getElementById('auth-overlay').style.display = 'none';
                 document.getElementById('overlay').style.display = 'flex';
+                    actualizarPerfil();
             }
         };
     </script>
