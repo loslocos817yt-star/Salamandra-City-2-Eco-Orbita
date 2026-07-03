@@ -58,16 +58,24 @@ export function updateSlimes(scene, camera, state, getGroundHeight, obstaculosCr
             }
         }
         s.mesh.lookAt(camera.position.x, s.mesh.position.y, camera.position.z);
-        
+
         if(distToPlayer < 1.6) {
             scene.remove(s.mesh); slimes.splice(i, 1); slimesCount++;
-            
-            // Actualización del contador con el objetivo de 8500
+
+            // Actualización del contador con el objetivo de 20
             const scoreEl = document.getElementById('score');
-            if(scoreEl) scoreEl.innerText = `SLIMES: ${slimesCount} / 8500`;
-            
-            if(slimesCount >= 8500) {
-                alert("¡Misión Cumplida! Has limpiado Salamandra City.");
+            if(scoreEl) scoreEl.innerText = `SLIMES: ${slimesCount} / 20`;
+
+            if(slimesCount >= 20) {
+                const rad = document.getElementById("radioStatus");
+                rad.style.opacity = 1;
+                const audio = new Audio("assets/music/discurso.mp3");
+                audio.play();
+                audio.onended = () => {
+                    rad.innerText = "Transmisión finalizada.";
+                    setTimeout(() => location.reload(), 3000);
+                };
+                slimesCount = -9999;
             }
         }
     }
