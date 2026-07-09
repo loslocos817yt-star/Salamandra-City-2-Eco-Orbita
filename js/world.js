@@ -1,4 +1,4 @@
-cat << 'EOF' > js/world.js
+//Ayudaaaa, esta cisa no se actializa 😂😂
 import * as THREE from 'three';
 import { crearNaveChocada } from './objects.js';
 
@@ -78,4 +78,3 @@ export function getGroundHeight(x, z) {
     const intersects = raycaster.intersectObject(suelo);
     return intersects.length > 0 ? intersects[0].point.y : 0;
 }
-EOF
