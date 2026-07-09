@@ -16,7 +16,7 @@ export function initWorld(scene, loader) {
 
     // 2. Agujero Negro MP4 (Eliminando el fondo blanco)
     videoElement = document.createElement("video");
-    videoElement.src = "assets/texturas/agujero.negro.mp4";
+    videoElement.src = "./assets/texturas/agujero.negro.mp4";
     videoElement.loop = true;
     videoElement.muted = true;
     videoElement.play();
