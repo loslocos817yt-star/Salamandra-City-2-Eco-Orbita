@@ -6,18 +6,49 @@ export let slimesCount = 0;
 export function initSlimes(scene, getGroundHeight) {
     const slimeGeo = new THREE.SphereGeometry(0.4, 8, 8);
     const ojoGeo = new THREE.SphereGeometry(0.06, 4, 4);
-    const slimeMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+    // El material de los ojos puede ser el mismo para todos
     const ojoMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
 
     for(let i = 0; i < 20; i++) {
-        const bodyMesh = new THREE.Mesh(slimeGeo, slimeMat);
-        const ojoIzq = new THREE.Mesh(ojoGeo, ojoMat); ojoIzq.position.set(-0.15, 0.1, 0.3); bodyMesh.add(ojoIzq);
-        const ojoDer = new THREE.Mesh(ojoGeo, ojoMat); ojoDer.position.set(0.15, 0.1, 0.3); bodyMesh.add(ojoDer);
+        // 1. Generar un color aleatorio vibrante
+        // HSL (Hue, Saturation, Lightness): Variamos el Tono (Hue) aleatoriamente
+        const colorAleatorio = new THREE.Color().setHSL(Math.random(), 1, 0.5);
 
-        const rx = (Math.random() - 0.5) * 60; const rz = (Math.random() - 0.5) * 60;
+        // 2. Crear un material único para este slime con su color
+        // Usamos MeshBasicMaterial para que parezca iluminado por sí mismo
+        const slimeMat = new THREE.MeshBasicMaterial({ color: colorAleatorio });
+        const bodyMesh = new THREE.Mesh(slimeGeo, slimeMat);
+
+        // 3. Añadir una luz puntual (PointLight) del mismo color para simular que brilla
+        // Parámetros: color, intensidad (1.5), distancia máxima (4)
+        const luzBrillo = new THREE.PointLight(colorAleatorio, 1.5, 4);
+        bodyMesh.add(luzBrillo); // Al añadirla al bodyMesh, la luz se moverá con el slime
+
+        // 4. Crear y posicionar los ojos
+        const ojoIzq = new THREE.Mesh(ojoGeo, ojoMat); 
+        ojoIzq.position.set(-0.15, 0.1, 0.3); 
+        bodyMesh.add(ojoIzq);
+        
+        const ojoDer = new THREE.Mesh(ojoGeo, ojoMat); 
+        ojoDer.position.set(0.15, 0.1, 0.3); 
+        bodyMesh.add(ojoDer);
+
+        // 5. Posicionar el slime en el mundo
+        const rx = (Math.random() - 0.5) * 60; 
+        const rz = (Math.random() - 0.5) * 60;
         bodyMesh.position.set(rx, getGroundHeight(rx, rz) + 0.4, rz);
+        
         scene.add(bodyMesh);
-        slimes.push({ mesh: bodyMesh, jumpVel: 0, dirX: 0, dirZ: 0, isGrounded: false, timer: Math.random() * 2 });
+        
+        // 6. Guardar en el arreglo
+        slimes.push({ 
+            mesh: bodyMesh, 
+            jumpVel: 0, 
+            dirX: 0, 
+            dirZ: 0, 
+            isGrounded: false, 
+            timer: Math.random() * 2 
+        });
     }
 }
 
@@ -60,7 +91,9 @@ export function updateSlimes(scene, camera, state, getGroundHeight, obstaculosCr
         s.mesh.lookAt(camera.position.x, s.mesh.position.y, camera.position.z);
 
         if(distToPlayer < 1.6) {
-            scene.remove(s.mesh); slimes.splice(i, 1); slimesCount++;
+            scene.remove(s.mesh); 
+            slimes.splice(i, 1); 
+            slimesCount++;
 
             // Actualización del contador con el objetivo de 20
             const scoreEl = document.getElementById('score');
@@ -68,15 +101,20 @@ export function updateSlimes(scene, camera, state, getGroundHeight, obstaculosCr
 
             if(slimesCount >= 20) {
                 const rad = document.getElementById("radioStatus");
-                rad.style.opacity = 1;
-                const audio = new Audio("assets/music/discurso.mp3");
-                audio.play();
-                audio.onended = () => {
-                    rad.innerText = "Transmisión finalizada.";
-                    setTimeout(() => location.reload(), 3000);
-                };
+                if(rad) rad.style.opacity = 1;
+                
+                try {
+                    const audio = new Audio("assets/music/discurso.mp3");
+                    audio.play();
+                    audio.onended = () => {
+                        if(rad) rad.innerText = "Transmisión finalizada.";
+                        setTimeout(() => location.reload(), 3000);
+                    };
+                } catch(e) {
+                    console.log("Error reproduciendo audio:", e);
+                }
                 slimesCount = -9999;
             }
         }
     }
-}
+            }
