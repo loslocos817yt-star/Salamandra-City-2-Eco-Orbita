@@ -67,7 +67,8 @@
 
     <div id="menu-container">
         <img src="assets/menu/logo.png" class="logo-game">
-        <button id="jugarBtn" class="btn-menu">JUGAR</button>
+        <button id="jugarBtn" class="btn-menu">JUGAR (SOLO)</button>
+        <button id="serverBtn" class="btn-menu" onclick="pedirServidor()">SERVIDOR MULTIJUGADOR</button>
         <button id="rankBtn" class="btn-menu" onclick="toggleLeaderboard()">CLASIFICACIÓN</button>
     </div>
 
@@ -88,19 +89,19 @@
         const REPO = "sc2EO-server";
         const FILE_PATH = "Players.json";
         const API_URL = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
-        
-        const P1 = "Z2hwXw=="; 
+
+        const P1 = "Z2hwXw==";
         const P2 = "MWJNeTU3ZmhHNVREQWtSSnBhSVp1aUNGM0JsR21RMWJWR2tB";
         const GH_TOKEN = atob(P1) + atob(P2);
 
-        // Iniciar música de menú en cuanto el usuario haga cualquier clic en la pantalla
+        // Iniciar música de menú
         document.body.addEventListener('click', () => {
             const music = document.getElementById('menuMusic');
             if (music.paused) {
-                music.volume = 0.5; // Volumen al 50%
+                music.volume = 0.5;
                 music.play().catch(e => console.log("Esperando interacción para audio"));
             }
-        }, { once: true }); // Se ejecuta solo la primera vez
+        }, { once: true });
 
         async function actualizarPerfil() {
             const user = localStorage.getItem("sc2_user");
@@ -122,6 +123,7 @@
                 document.getElementById("profile-rank").innerText = rank > 0 ? "#" + rank : "N/A";
             } catch(e) { console.error("Error cargando perfil:", e); }
         }
+
         function restaurarAuth() {
             document.getElementById('auth-overlay').innerHTML = `
                 <h1>Entrar a Salamandra City</h1>
@@ -134,7 +136,7 @@
         async function autenticar() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
-            
+
             if (!user || !pass) {
                 alert("Debes poner usuario y contraseña");
                 return;
@@ -154,7 +156,6 @@
 
                 if (content[user] !== undefined) {
                     if (typeof content[user] === 'number') {
-                        // Usuario legado (como tu récord viejo), se actualiza al nuevo formato
                         content[user] = { pwd: pass, time: content[user] };
                     } else if (content[user].pwd !== pass) {
                         alert("Contraseña incorrecta o usuario ya en uso.");
@@ -162,11 +163,9 @@
                         return;
                     }
                 } else {
-                    // Crear nuevo usuario
                     content[user] = { pwd: pass, time: 0 };
                 }
 
-                // Subir actualización a GitHub
                 const putRes = await fetch(API_URL, {
                     method: 'PUT',
                     headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
@@ -227,7 +226,6 @@
                     content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
                 }
 
-                // Adaptar para leer el nuevo formato {pwd, time} o el viejo (solo números)
                 const usuariosOrdenados = Object.entries(content).map(([nombre, val]) => {
                     let tiempo = typeof val === 'number' ? val : val.time;
                     return [nombre, tiempo];
@@ -255,6 +253,25 @@
                 console.error("Error Leaderboard:", e);
             }
         }
+
+        // --- LÓGICA DE MULTIJUGADOR DESDE EL MENÚ ---
+        function pedirServidor() {
+            let urlGuardada = localStorage.getItem('sc2_server_url') || 'ws://localhost:8765';
+            let urlServer = prompt("Ingresa la URL del servidor Termux (ej: ws://192.168.1.100:8765):", urlGuardada);
+
+            if (urlServer) {
+                urlServer = urlServer.trim();
+                localStorage.setItem('sc2_server_url', urlServer);
+
+                // Mandamos al usuario al juego con la URL en los parámetros
+                window.location.href = `game.html?server=${encodeURIComponent(urlServer)}`;
+            }
+        }
+
+        document.getElementById('jugarBtn').onclick = () => {
+            // Modo Solo
+            window.location.href = 'game.html';
+        };
 
         const canvas = document.getElementById('panoramaCanvas');
         const ctx = canvas.getContext('2d');
@@ -284,13 +301,11 @@
             document.getElementById('overlay').style.display = 'none';
         };
 
-        document.getElementById('jugarBtn').onclick = () => { window.location.href = 'game.html'; };
-
         window.onload = () => {
             if (localStorage.getItem('sc2_user')) {
                 document.getElementById('auth-overlay').style.display = 'none';
                 document.getElementById('overlay').style.display = 'flex';
-                    actualizarPerfil();
+                actualizarPerfil();
             }
         };
     </script>
